@@ -1,0 +1,52 @@
+import { createAsyncThunk } from "@reduxjs/toolkit";
+import { setSite } from "../slices/siteSlice";
+
+export const fetchSiteThunk = createAsyncThunk(
+  "site/fetchSite",
+  async (_, thunkAPI) => {
+    try {
+      //const token = thunkAPI.getState().user?.token;
+
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/wp-json/`, {
+        "Content-Type": "application/json",
+        //...(token && { Authorization: `Bearer ${token}` }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Impossible de récupérer les informations du site.");
+      }
+
+      let siteData = await response.json();
+      let logoUrl = null;
+
+      try {
+        if (siteData.site_logo) {
+          const mediaResponse = await fetch(
+            `${import.meta.env.VITE_API_URL}/wp-json/wp/v2/media/${siteData.site_logo}`,
+          );
+          if (mediaResponse.ok) {
+            const mediaData = await mediaResponse.json();
+            logoUrl = mediaData.source_url ?? null;
+          }
+        }
+      } catch {}
+
+      // const formattedData = {
+      //   name: siteData.name,
+      //   description: siteData.description,
+      //   url: siteData.url || siteData.home,
+      //   logoUrl,
+      //   faviconUrl: siteData.site_icon_url ?? null,
+      // };
+
+      siteData.logoUrl = logoUrl ?? null;
+      siteData.faviconUrl = siteData.site_icon_url ?? null;
+
+      thunkAPI.dispatch(setSite(siteData));
+
+      return formattedData;
+    } catch (error) {
+      return thunkAPI.rejectWithValue(error.message);
+    }
+  },
+);
